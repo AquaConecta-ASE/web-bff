@@ -1,0 +1,176 @@
+﻿server:
+  port: 8081  # Azure usa variable PORT, local usa 8081
+
+spring:
+  application:
+    name: bff-web-gateway
+
+  # OAuth2 Resource Server - Auth0 Configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-c18xi4y5iccg4xkd.us.auth0.com/
+
+  cloud:
+    gateway:
+      # CORS se maneja en SecurityConfig.java via CorsWebFilter
+      routes:
+        # RESIDENTS - CRUD Completo para Provider/Admin
+        - id: web-residents-all
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/residents,/api/web/residents/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+            - name: CircuitBreaker
+              args:
+                name: residentsCircuitBreaker
+                fallbackUri: forward:/fallback
+
+        # PROVIDERS - Self Management
+        - id: web-providers-all
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/providers,/api/web/providers/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+            # Circuit Breaker deshabilitado para pruebas con Azure
+            # - name: CircuitBreaker
+            #   args:
+            #     name: providersCircuitBreaker
+            #     fallbackUri: forward:/fallback
+
+        # ISSUE REPORTS - Ver y Editar Estados
+        - id: web-issue-reports
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/issue-reports,/api/web/issue-reports/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # WATER SUPPLY REQUESTS - Actualizar Estado y Fecha
+        - id: web-water-supply-requests
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/water-supply-requests,/api/web/water-supply-requests/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # DEVICES - Ver Todos los Eventos
+        - id: web-devices
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/devices,/api/web/devices/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # SUBSCRIPTIONS - Gestion Completa
+        - id: web-subscriptions
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/subscriptions,/api/web/subscriptions/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # USERS - Gestion Admin
+        - id: web-users
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/users,/api/web/users/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # PROFILES - Gestion General
+        - id: web-profiles
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/profiles,/api/web/profiles/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # ROLES - Role Management
+        - id: web-roles
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/roles,/api/web/roles/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # PREDICTIVE ANALYTICS - Predicciones (Solo Web)
+        - id: web-predictive-analytics
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/predictive-analytics/**
+          filters:
+            - RewritePath=/api/web/predictive-analytics/(?<segment>.*), /api/v1/predictive-analytics/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # ANALYTICS - Analytics General (Solo Web)
+        - id: web-analytics
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/analytics/**
+          filters:
+            - RewritePath=/api/web/analytics/(?<segment>.*), /api/v1/analytics/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+        # DASHBOARD - Dashboard Endpoints
+        - id: web-dashboard
+          uri: https://aquaconecta-backend-app.azurewebsites.net
+          predicates:
+            - Path=/api/web/dashboard,/api/web/dashboard/**
+          filters:
+            - RewritePath=/api/web/(?<segment>.*), /api/v1/${segment}
+            - AddRequestHeader=X-Client-Type, WEB
+
+# Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      residentsCircuitBreaker:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 3
+        slowCallDurationThreshold: 30000  # 30 segundos
+        slowCallRateThreshold: 100
+      providersCircuitBreaker:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 3
+        slowCallDurationThreshold: 30000  # 30 segundos para Azure
+        slowCallRateThreshold: 100
+  timelimiter:
+    instances:
+      residentsCircuitBreaker:
+        timeoutDuration: 30s
+      providersCircuitBreaker:
+        timeoutDuration: 30s  # Timeout de 30 segundos
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web.cors: DEBUG

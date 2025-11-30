@@ -1,0 +1,3 @@
+com\ironcoders\bff\web\WebGatewayApplication.class
+com\ironcoders\bff\web\FallbackController.class
+com\ironcoders\bff\web\SecurityConfig.class
